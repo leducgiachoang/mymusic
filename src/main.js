@@ -47,7 +47,6 @@ function showall(data){
 }
 
 function GetPlayMusic(data, creator){
-  console.log(data)
   const box_music = document.querySelector('#box-music')
   box_music.innerHTML = '';
   box_music.innerHTML = `<audio controls autoplay>
