@@ -6,10 +6,8 @@ fetch('https://api.apify.com/v2/key-value-stores/EJ3Ppyr2t73Ifit64/records/LATES
 .then(data => {
     const songs = data.songs
     const top100vn = songs.top100_VN[0].songs
-    console.log(top100vn)
     showall(top100vn)
 
-    console.log(data)
  
 })
 .catch((error) => {
@@ -19,7 +17,6 @@ fetch('https://api.apify.com/v2/key-value-stores/EJ3Ppyr2t73Ifit64/records/LATES
 function showall(data){
       
         var show_all_music = document.querySelector('#show_all_music')
-
 
         for (let i = 0; i < data.length; i++) {
           var tagshtml = `
@@ -48,9 +45,6 @@ function showall(data){
     })
 
 }
-
-
-
 
 function GetPlayMusic(data, creator){
   console.log(data)
