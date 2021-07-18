@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+		 <title>Song with lyrics</title>
+     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+     	<style>
+			/* https://blog.csdn.net/yzy_csdn/article/details/84536646 */
+			div{
+				width:340px;
+				height:500px;
+				margin:0 auto;
+				overflow:hidden;
+			}
+			ul{
+				transition-duration: 600ms;
+			}
+			ul, li{
+				list-style:none;
+				padding: 0;
+				margin: 0;
+			}
+			li.on{
+				color: red;
+			}
+			p{
+				overflow: hidden;
+				text-overflow: ellipsis;
+				height: 16px;
+				line-height: 16px;
+				-webkit-line-clamp: 1;
+				-webkit-box-orient: vertical;
+				display: -webkit-box;
+				text-align: center;
+				margin-top: 0;
+				margin-bottom: 16px;
+			}
+			audio{
+				margin-top: 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<div>
+			 <ul id="lrclist" style="transform: translateY(250px);"><!-- Make sure the lyrics are in the middle -->
+ 
+			</ul>
+		</div>
+		 <audio id="audio" src="https://aredir.nixcdn.com/YG_Audio1/OnTheGround-ROSE-6964051.mp3?st=f3noFPY7GCiMZucRE8I3Ag&e=1626319145" controls="controls" autoplay="true"></audio>
+ 
+		<script>
+            var lrc = "";
+            function getLRC() {
+                var ajax = new XMLHttpRequest();
+                                 ajax.open("GET", "https://lrc-nct.nixcdn.com/2021/03/25/3/b/0/1/1616634269302.lrc");
+                ajax.onreadystatechange = function () {
+                    if (ajax.readyState === 4 && ajax.status === 200) {
+                        lrc = ajax.responseText;
+                        // document.getElementById("lyric1").innerHTML = lrc;
+                        createLrcObj(lrc);
+                    }
+                };
+                ajax.send(null);
+            }
+            getLRC();
+            var oLRC = {
+                                 ti: "", //Song title
+                                 ar: "", //Singer
+                                 al: "", //Album name
+                                 by: "", //Lyric producer
+                                 offset: 0, //Time compensation value, in milliseconds, used to adjust the overall position of the lyrics
+                                 ms: [] // Lyrics array {t: time, c: lyrics}
+            };
+            function createLrcObj(lrc) {
+                if (lrc.length === 0) return;
+                                 var lrcs = lrc.split('\n');//Use Enter to split into an array
+                                 for (var i in lrcs) {//traverse the lyrics array
+                    if (lrcs.hasOwnProperty(i)) {
+                                                 lrcs[i] = lrcs[i].replace(/(^\s*)|(\s*$)/g, ""); //Remove spaces before and after
+                                                 var t_lrc = lrcs[i].substring(lrcs[i].indexOf("[") + 1, lrcs[i].indexOf("]"));//Fetch the contents of []
+                                                 var s_text = t_lrc.split(":");//Separate: the text before and after the number
+                                                 if (isNaN(parseInt(s_text[0]))) {//Not a numeric value, basically the song title, author and other information
+                            for (var j in oLRC) {
+                                if (j !== "ms" && j === s_text[0].toLowerCase()) {
+                                    oLRC[j] = s_text[1];
+                                }
+                            }
+                                                 } else {//It is a numeric value, basically it is the lyrics time
+                            var arr = lrcs[i].match(/\[(\d+:.+?)\]/g);//Extract time field, there may be multiple
+                            var start = 0;
+                            for (var lrc_position in arr) {
+                                if (arr.hasOwnProperty(lrc_position)) {
+                                                                         start += arr[lrc_position].length; //Calculate lyrics position
+                                }
+                            }
+                                                         var content = lrcs[i].substring(start);//Get lyrics content
+                            for (var k in arr) {
+                                if (arr.hasOwnProperty(k)) {
+                                                                         var t = arr[k].substring(1, arr[k].length-1);//Fetch the contents of []
+                                                                         var s = t.split(":");//Separation: before and after text
+                                                                         oLRC.ms.push({//object{t: time, c: lyrics} added to ms array
+                                        t: (parseFloat(s[0]) * 60 + parseFloat(s[1])).toFixed(3),
+                                        c: content
+                                    });
+                                }
+                            }
+                        }
+                    }
+ 
+                }
+                                 oLRC.ms.sort(function (a, b) {//sort in chronological order
+                    return a.t - b.t;
+                });
+                // var lrc_result = "";
+                                 var lrcTime = [];//The time array corresponding to the lyrics
+		         var ul = $("#lrclist")[0];//Get ul
+                                 for (var n in oLRC.ms) {//traverse the ms array and add the lyrics to the list
+                    // lrc_result += '<li>' + oLRC.ms[n].c + '</li>';
+                    // document.getElementById("lyric").innerHTML = lrc_result;
+                                         ul.innerHTML += "<li><p>"+oLRC.ms[n].c+"</p></li>";//Fill the lyrics
+                }
+                                 // console.log(oLRC.ms[0].t); // 0.231 at time 00:00.231
+                // console.log(oLRC.ms.length);
+                                 // for(var result in oLRC){ //View the analysis result
+                //     // console.log(result,":",oLRC[result]);
+                // }
+                for(var x=0;x< oLRC.ms.length; x++){
+                    lrcTime[x] = oLRC.ms[x].t;
+                }
+ 
+                                 lrcTime[oLRC.ms.length] = lrcTime[oLRC.ms.length-1] + 3;//If there is no additional end time, the lyrics will not scroll to the last sentence at the end
+ 
+ 
+                                 var $li = $("#lrclist>li");//Get all li
+                                 var currentLine = 0;//Which sentence is currently playing
+                                 var currentTime;//Current playing time
+                var audio = document.getElementById("audio");
+                                 var ppxx;//Save ul's translateY value
+ 
+                                 audio.ontimeupdate = function() {//audio time change event
+                    currentTime = audio.currentTime;
+                    for (j=currentLine, len=lrcTime.length; j<len; j++){
+                        if (currentTime<lrcTime[j+1] && currentTime>lrcTime[j]){
+                            currentLine =  j;
+                            ppxx = 250-(currentLine*32);
+                            ul.style.transform = "translateY("+ppxx+"px)";
+                            $li.get(currentLine-1).className="";
+                            console.log("on"+currentLine);
+                            $li.get(currentLine).className="on";
+                            break;
+                        }
+                    }
+                };
+                                 audio.onseeked = function() {//event after audio progress changes
+                    currentTime = audio.currentTime;
+                    console.log("  off"+currentLine);
+                    $li.get(currentLine).className="";
+                    for (k=0, len=lrcTime.length; k<len; k++){
+                        if (currentTime<lrcTime[k+1] && currentTime<lrcTime[k]){
+                            currentLine =  k;
+                            break;
+                        }
+                    }
+                };
+ 
+            }
+		</script>
+	</body>
+</html>
